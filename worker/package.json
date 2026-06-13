@@ -1,0 +1,21 @@
+{
+  "name": "news-ai-worker",
+  "version": "1.0.0",
+  "description": "Worker processor for handling queue tasks",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.78.0",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1",
+    "openai": "^6.42.0",
+    "uuid": "^14.0.0",
+    "youtube-dl-exec": "^3.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
