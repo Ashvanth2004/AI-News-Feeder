@@ -998,3 +998,214 @@
   .news-card { break-inside: avoid; }
   body { background: white; color: black; }
 }
+
+/* ════════════════════════════════
+   LIVE NEWS ARTICLES
+   ════════════════════════════════ */
+.live-news-articles-section {
+  margin-bottom: var(--section-gap);
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.live-news-articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.live-news-article-card {
+  display: flex;
+  gap: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-news-article-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--red), var(--amber));
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.live-news-article-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.live-news-article-image {
+  flex-shrink: 0;
+  width: 180px;
+  height: 120px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+.live-news-article-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live-news-article-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.live-news-article-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.live-news-article-source {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+.live-news-article-category {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.live-news-article-time {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.live-news-article-headline {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.live-news-article-summary {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.live-news-article-body {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.live-news-article-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 0.5rem 0;
+}
+
+.live-news-article-full-text {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--text-accent);
+  text-align: justify;
+  white-space: pre-wrap;
+}
+
+.live-news-article-transcript {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.live-news-article-transcript .transcript-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.live-news-article-transcript p {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  font-style: italic;
+}
+
+.live-news-article-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.live-news-article-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--blue);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.live-news-article-toggle:hover {
+  background: var(--blue-glow);
+  border-color: var(--border-accent);
+}
+
+.live-news-article-link {
+  font-size: 0.75rem;
+  color: var(--cyan);
+  text-decoration: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.live-news-article-link:hover {
+  background: var(--cyan-glow);
+  border-color: rgba(34, 211, 238, 0.3);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .live-news-article-card {
+    flex-direction: column;
+  }
+
+  .live-news-article-image {
+    width: 100%;
+    height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .live-news-article-headline {
+    font-size: 0.95rem;
+  }
+}

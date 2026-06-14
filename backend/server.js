@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -22,20 +22,32 @@ initSocket(server);
 
 // Database connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/newsai';
+const PORT = process.env.PORT || 3002;
+
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    
-    // Start server
-    const PORT = process.env.PORT || 3002;
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      
-      // Start background worker
-      startWorker();
-    });
+    startServer(true);
   })
   .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
+    console.warn('⚠️ MongoDB not available, running without database:', err.message);
+    console.warn('⚠️ News storage will be disabled. Install MongoDB or set MONGO_URI in .env');
+    startServer(false);
   });
+
+function startServer(hasDb) {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Socket.IO available on ws://localhost:${PORT}`);
+    if (!hasDb) {
+      console.warn('⚠️ Running in degraded mode — no database');
+    } else {
+      // Start background worker
+      try {
+        startWorker();
+      } catch (e) {
+        console.warn('⚠️ Could not start worker:', e.message);
+      }
+    }
+  });
+}

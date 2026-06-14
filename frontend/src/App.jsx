@@ -5,6 +5,7 @@ import NewsGrid from './components/NewsGrid';
 import NewsSlideshow from './components/NewsSlideshow';
 import LiveStreamPanel, { LIVE_CHANNELS } from './components/LiveStreamPanel';
 import LiveTicker from './components/LiveTicker';
+import LiveNewsArticle from './components/LiveNewsArticle';
 import './App.css';
 
 function App() {
@@ -22,7 +23,11 @@ function App() {
       ndtv: 'NDTV India — Top Hindi News Stories Live',
       republic: 'Republic Bharat — Breaking News in Hindi',
       abp: 'ABP News — Hindi News Live Updates',
+      aajTak: 'Aaj Tak — Hindi News & Live Updates',
       timesNow: 'Times Now — English News Breaking Updates',
+      indiaToday: 'India Today — Top Stories & Live Updates',
+      ndtv24x7: 'NDTV 24x7 — Breaking News Live',
+      zeeNews: 'Zee News — Hindi News & Live Updates',
     };
     const summaries = {
       polimer: 'Watch Polimer News live for the latest breaking news, political updates, and current affairs from Tamil Nadu.',
@@ -32,7 +37,11 @@ function App() {
       ndtv: 'NDTV India offers comprehensive Hindi news coverage with live reports and breaking news alerts.',
       republic: 'Republic Bharat delivers hard-hitting Hindi news, debates, and exclusive breaking stories.',
       abp: 'ABP News brings you the latest Hindi news, political updates, and live coverage of major events.',
+      aajTak: 'Aaj Tak provides comprehensive Hindi news coverage with live updates, debates, and breaking stories.',
       timesNow: 'Times Now provides fast-paced English news coverage with breaking news and expert analysis.',
+      indiaToday: 'India Today covers top stories from India and around the world with live updates and expert analysis.',
+      ndtv24x7: 'NDTV 24x7 delivers breaking news, in-depth analysis, and live coverage from India and around the world.',
+      zeeNews: 'Zee News brings you the latest Hindi news, live updates, and exclusive coverage of major events.',
     };
 
     return LIVE_CHANNELS.map((channel, index) => ({
@@ -104,7 +113,7 @@ function App() {
 
   // Real-time updates via Socket.IO from backend
   useEffect(() => {
-    const BACKEND_URL = 'http://localhost:3002';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002';
     const socket = socketIO(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
@@ -158,7 +167,8 @@ function App() {
   useEffect(() => {
     const fetchBackendNews = async () => {
       try {
-        const res = await fetch('http://localhost:3002/api/news?limit=50');
+        const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002';
+        const res = await fetch(`${BACKEND}/api/news?limit=50`);
         const data = await res.json();
         if (data.results && data.results.length > 0) {
           const items = data.results.map((item, index) => ({
@@ -192,6 +202,10 @@ function App() {
 
   const gridNews = newsItems.length > 1 ? newsItems.slice(8) : [];
   // Slideshow uses the top 8 articles
+  // AI-generated live news articles (from Socket.IO)
+  const aiArticles = newsItems.filter(
+    (item) => item.category === 'AI Generated' || item.isBreaking
+  );
 
   return (
     <>
@@ -209,6 +223,8 @@ function App() {
               <NewsSlideshow articles={newsItems} />
 
               <LiveStreamPanel />
+
+              <LiveNewsArticle articles={aiArticles} />
 
               <section className="news-section">
                 <div className="section-header">
