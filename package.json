@@ -1,0 +1,17 @@
+{
+  "name": "news-ai",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "mongoose": "^9.7.0"
+  },
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "install-api": "cd api && npm install",
+    "postinstall": "cd api && npm install"
+  }
+}

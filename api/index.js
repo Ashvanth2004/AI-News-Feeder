@@ -102,4 +102,4 @@ app.post('/webhook/worker', async (req, res) => {
 });
 
 // ===== Export for Vercel Serverless =====
-module.exports = app;
+module.exports = (req, res) => app(req, res);
