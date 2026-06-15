@@ -1,6 +1,7 @@
 const express = require('express');
 const News = require('../models/News');
 const { runCheck } = require('../workers/processLiveNews');
+const { generateNewsFromChannels } = require('../services/channelNewsService');
 
 const router = express.Router();
 
@@ -63,6 +64,22 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// POST /api/news/generate — Manually trigger channel news generation
+router.post('/news/generate', async (req, res) => {
+  try {
+    console.log('📰 Manual channel news generation triggered');
+    const articles = await generateNewsFromChannels();
+    res.json({
+      status: 'success',
+      count: articles.length,
+      message: `Generated ${articles.length} new articles`,
+    });
+  } catch (error) {
+    console.error('Error generating news:', error.message);
+    res.status(500).json({ error: 'Failed to generate news' });
   }
 });
 

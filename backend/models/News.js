@@ -10,7 +10,7 @@ const newsSchema = new mongoose.Schema({
   videoId: { type: String },
   transcriptSnippet: { type: String },
   publishedAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) },
+  expiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
 });
 
 // Index for sorting by newest first

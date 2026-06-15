@@ -6,6 +6,7 @@ const http = require('http');
 const { initSocket } = require('./services/socketService');
 const newsRoutes = require('./routes/newsRoutes');
 const { startWorker } = require('./workers/processLiveNews');
+const { startChannelNewsService } = require('./services/channelNewsService');
 
 const app = express();
 const server = http.createServer(app);
@@ -42,11 +43,18 @@ function startServer(hasDb) {
     if (!hasDb) {
       console.warn('⚠️ Running in degraded mode — no database');
     } else {
-      // Start background worker
+      // Start background worker (YouTube live caption processor)
       try {
         startWorker();
       } catch (e) {
         console.warn('⚠️ Could not start worker:', e.message);
+      }
+
+      // Start channel news service (generates articles from live channel headlines)
+      try {
+        startChannelNewsService();
+      } catch (e) {
+        console.warn('⚠️ Could not start channel news service:', e.message);
       }
     }
   });

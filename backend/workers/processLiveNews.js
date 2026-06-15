@@ -51,10 +51,10 @@ async function processChannel(channel) {
       videoId,
       transcriptSnippet: transcript ? transcript.slice(-500) : null,
       publishedAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
-    console.log(`✅ Saved to MongoDB: "${headline}" (${category}) — expires in 24h`);
+    console.log(`✅ Saved to MongoDB: "${headline}" (${category}) — expires in 30 days`);
 
     // Phase 5: Emit "new-article" via Socket.IO
     const articlePayload = {
@@ -86,7 +86,7 @@ async function processChannel(channel) {
 async function startWorker() {
   console.log('🚀 Live News Worker started');
   console.log('⏰ Checking channels every 60 seconds...');
-  console.log('🗑️  MongoDB TTL: articles auto-delete after 24 hours');
+  console.log('🗑️  MongoDB TTL: articles auto-delete after 30 days');
 
   // Run immediately on start
   await runCheck();
