@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const LIVE_CHANNELS = [
   { id: 'polimer', name: 'Polimer News', videoId: 'vb72Ot79JrQ', lang: 'ta', newsHeadlines: [
@@ -76,6 +76,86 @@ const NewsTickerBox = ({ channel }) => {
   );
 };
 
+/**
+ * LiveVideoCard — Each video card with IntersectionObserver for auto-unmute.
+ * When the video scrolls into view on mobile, it unmutes.
+ * When it scrolls out of view, it mutes again.
+ */
+const LiveVideoCard = ({ channel }) => {
+  const iframeRef = useRef(null);
+  const [inView, setInView] = useState(false);
+  const [unmuted, setUnmuted] = useState(false);
+
+  // IntersectionObserver to detect when video is visible
+  useEffect(() => {
+    const el = iframeRef.current?.parentElement;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+      },
+      { threshold: 0.4 } // 40% visible = in view
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-unmute when in view on mobile devices
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    if (!isMobile || !inView || unmuted) return;
+
+    // Small delay to ensure smooth transition
+    const timer = setTimeout(() => {
+      setUnmuted(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [inView, unmuted]);
+
+  // Re-mute when scrolled out of view
+  useEffect(() => {
+    if (!inView && unmuted) {
+      setUnmuted(false);
+    }
+  }, [inView]);
+
+  const src = `https://www.youtube.com/embed/${channel.videoId}?autoplay=1&${unmuted ? 'mute=0' : 'mute=1'}&controls=1&rel=0&loop=1&playsinline=1&fs=1`;
+
+  return (
+    <div key={channel.id} className={`live-stream-card auto-play ${inView ? 'in-view' : ''}`} ref={iframeRef}>
+      <div className="live-stream-player-wrapper">
+        <iframe
+          className="live-stream-iframe"
+          src={src}
+          title={channel.name}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+          webkitallowfullscreen="true"
+          mozallowfullscreen="true"
+        />
+        {/* Unmute overlay button for mobile */}
+        {!unmuted && inView && (
+          <button className="unmute-overlay" onClick={() => setUnmuted(true)}>
+            <span className="unmute-icon">🔊</span>
+            <span className="unmute-text">Tap to Unmute</span>
+          </button>
+        )}
+      </div>
+      <div className="live-stream-info auto">
+        <div className="live-stream-info-header">
+          <span className="live-stream-live-tag">LIVE</span>
+          <span className="live-stream-channel-name">{channel.name}</span>
+          {unmuted && <span className="unmuted-indicator">🔊</span>}
+        </div>
+        <NewsTickerBox channel={channel} />
+      </div>
+    </div>
+  );
+};
+
 const LiveStreamPanel = () => (
   <section className="live-stream-section">
     <div className="section-header">
@@ -87,24 +167,7 @@ const LiveStreamPanel = () => (
     </div>
     <div className="live-stream-grid auto">
       {LIVE_CHANNELS.map((channel) => (
-        <div key={channel.id} className="live-stream-card auto-play">
-          <div className="live-stream-player-wrapper">
-            <iframe
-              className="live-stream-iframe"
-              src={`https://www.youtube.com/embed/${channel.videoId}?autoplay=1&mute=1&controls=1&rel=0&loop=1`}
-              title={channel.name}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-          <div className="live-stream-info auto">
-            <div className="live-stream-info-header">
-              <span className="live-stream-live-tag">LIVE</span>
-              <span className="live-stream-channel-name">{channel.name}</span>
-            </div>
-            <NewsTickerBox channel={channel} />
-          </div>
-        </div>
+        <LiveVideoCard key={channel.id} channel={channel} />
       ))}
     </div>
   </section>
