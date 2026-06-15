@@ -1,80 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-/**
- * LiveNewsArticle - Displays AI-generated articles from live news streams
- * Fetches from backend and receives real-time updates via props
- */
+const LANG_MAP = { en: 'EN', ta: 'த', hi: 'ह' };
+const CAT_COLORS = { Politics: 'var(--red)', Technology: 'var(--accent-1)', Business: 'var(--amber)', Sports: 'var(--green)', Entertainment: 'var(--accent-3)', Health: 'var(--accent-2)', Science: 'var(--purple)', Weather: 'var(--accent-2)' };
+const SENT_EMOJI = { positive: '🟢', negative: '🔴', neutral: '⚪' };
+const formatTime = d => { if (!d) return ''; const diff = Date.now() - new Date(d).getTime(); const m = Math.floor(diff/60000); const h = Math.floor(m/60); return m<1 ? 'Just now' : m<60 ? `${m}m ago` : h<24 ? `${h}h ago` : new Date(d).toLocaleDateString('en-IN', {day:'numeric',month:'short'}); };
+const getColor = c => CAT_COLORS[c] || 'var(--text-muted)';
+
 const LiveNewsArticle = ({ articles: propArticles }) => {
-  const [expandedId, setExpandedId] = useState(null);
-  const [localArticles, setLocalArticles] = useState([]);
+  const [expanded, setExpanded] = useState(null);
+  const [locals, setLocals] = useState([]);
+  const [summaries, setSummaries] = useState({});
+  const [sentiments, setSentiments] = useState({});
+  const [translations, setTranslations] = useState({});
+  const [currentLang, setCurrentLang] = useState({});
+  const [speaking, setSpeaking] = useState({});
+  const [loading, setLoading] = useState({});
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002';
 
-  // Fetch stored articles from backend on mount
   useEffect(() => {
-    const fetchArticles = async () => {
+    (async () => {
       try {
-        const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3002';
         const res = await fetch(`${BACKEND}/api/news?limit=20`);
         const data = await res.json();
-        if (data.results && data.results.length > 0) {
-          setLocalArticles(data.results);
+        if (data.results?.length) {
+          setLocals(data.results);
+          data.results.forEach(a => {
+            if (a.summaryBullets?.length) setSummaries(p => ({...p, [a._id]: a.summaryBullets}));
+            if (a.sentiment) setSentiments(p => ({...p, [a._id]: {sentiment:a.sentiment, score:a.sentimentScore}}));
+            if (a.translations && Object.keys(a.translations).length) setTranslations(p => ({...p, [a._id]: a.translations}));
+          });
         }
-      } catch (err) {
-        // Backend not available — that's OK, we'll get articles via Socket.IO
-      }
-    };
-    fetchArticles();
+      } catch {}
+    })();
   }, []);
 
-  // Merge prop articles (from Socket.IO) with fetched articles
-  const allArticles = [...localArticles, ...propArticles];
-
-  // Deduplicate by _id or headline
+  const all = [...locals, ...propArticles];
   const seen = new Set();
-  const uniqueArticles = allArticles.filter((article) => {
-    const key = article._id || article.headline;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const articles = all.filter(a => { const k = a._id || a.headline; if (seen.has(k)) return false; seen.add(k); return true; });
+  const toggle = useCallback(id => { 
+    if (expanded !== id) fetch(`${BACKEND}/api/news/${id}/read`, {method:'POST'}).catch(()=>{});
+    setExpanded(expanded === id ? null : id);
+  }, [expanded]);
 
-  if (uniqueArticles.length === 0) {
-    return null; // Don't show section if no articles
-  }
-
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
+  const fetchSummary = async id => {
+    if (summaries[id]) return;
+    setLoading(p => ({...p, [`s-${id}`]: true}));
+    try { const res = await fetch(`${BACKEND}/api/news/${id}/summarize`, {method:'POST'}); const d = await res.json(); if (d.bullets?.length) setSummaries(p => ({...p, [id]: d.bullets})); } catch {}
+    setLoading(p => ({...p, [`s-${id}`]: false}));
   };
 
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHrs = Math.floor(diffMins / 60);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHrs < 24) return `${diffHrs}h ago`;
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const fetchSentiment = async id => {
+    if (sentiments[id]) return;
+    setLoading(p => ({...p, [`se-${id}`]: true}));
+    try { const res = await fetch(`${BACKEND}/api/news/${id}/sentiment`, {method:'POST'}); const d = await res.json(); setSentiments(p => ({...p, [id]: {sentiment:d.sentiment, score:d.score}})); } catch {}
+    setLoading(p => ({...p, [`se-${id}`]: false}));
   };
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Politics': 'var(--red)',
-      'Technology': 'var(--blue)',
-      'Business': 'var(--amber)',
-      'Sports': 'var(--green)',
-      'Entertainment': 'var(--purple)',
-      'Health': 'var(--cyan)',
-      'Science': 'var(--purple)',
-      'Weather': 'var(--cyan)',
-      'Local News': 'var(--amber)',
-      'Crime': 'var(--red)',
-      'General': 'var(--text-muted)',
-    };
-    return colors[category] || 'var(--text-muted)';
+  const fetchTranslation = async (id, lang) => {
+    setLoading(p => ({...p, [`t-${id}-${lang}`]: true}));
+    try {
+      const res = await fetch(`${BACKEND}/api/news/${id}/translate`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({languages:[lang]})});
+      const d = await res.json();
+      setTranslations(p => ({...p, [id]: {...p[id], ...d.translations}}));
+      setCurrentLang(p => ({...p, [id]: lang}));
+    } catch {}
+    setLoading(p => ({...p, [`t-${id}-${lang}`]: false}));
   };
+
+  const speak = (id, text, lang='en') => {
+    if (speaking[id]) { window.speechSynthesis.cancel(); setSpeaking(p => ({...p, [id]: false})); return; }
+    const u = new SpeechSynthesisUtterance(text.slice(0,500));
+    u.lang = lang === 'ta' ? 'ta-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
+    u.rate = 0.9; u.onend = () => setSpeaking(p => ({...p, [id]: false}));
+    window.speechSynthesis.speak(u);
+    setSpeaking(p => ({...p, [id]: true}));
+  };
+
+  if (!articles.length) return null;
 
   return (
     <section className="live-news-articles-section">
@@ -83,94 +85,74 @@ const LiveNewsArticle = ({ articles: propArticles }) => {
           <span className="section-indicator live"></span>
           <h2>AI-Generated Live Articles</h2>
         </div>
-        <span className="article-count">{uniqueArticles.length} articles</span>
+        <span className="article-count">{articles.length} articles</span>
       </div>
-
       <div className="live-news-articles-list">
-        {uniqueArticles.map((article) => {
-          const isExpanded = expandedId === (article._id || article.headline);
+        {articles.map(article => {
+          const id = article._id || article.headline;
+          const isEx = expanded === id;
+          const sent = sentiments[id];
+          const sum = summaries[id];
+          const trans = translations[id];
+          const lang = currentLang[id] || 'en';
+          const disp = lang === 'en' ? article : { headline: trans?.[lang]?.headline || article.headline, summary: trans?.[lang]?.summary || article.summary, article: trans?.[lang]?.article || article.article };
+
           return (
-            <div key={article._id || article.headline} className="live-news-article-card">
-              {/* Thumbnail */}
+            <div key={id} className={`live-news-article-card ${isEx ? 'expanded' : ''}`}>
               {article.image && (
                 <div className="live-news-article-image">
-                  <img
-                    src={article.image}
-                    alt={article.headline || 'News article'}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
+                  <img src={article.image} alt="" onError={e => e.target.style.display='none'} />
                 </div>
               )}
-
               <div className="live-news-article-content">
-                {/* Meta row */}
                 <div className="live-news-article-meta">
-                  {article.sourceChannel && (
-                    <span className="live-news-article-source">
-                      📺 {article.sourceChannel}
-                    </span>
-                  )}
-                  {article.category && (
-                    <span
-                      className="live-news-article-category"
-                      style={{ color: getCategoryColor(article.category) }}
-                    >
-                      {article.category}
-                    </span>
-                  )}
-                  <span className="live-news-article-time">
-                    {formatTime(article.publishedAt || article.timestamp)}
-                  </span>
+                  {article.sourceChannel && <span className="live-news-article-source">📺 {article.sourceChannel}</span>}
+                  {article.category && <span className="live-news-article-category" style={{color: getColor(article.category)}}>{article.category}</span>}
+                  <span className="live-news-article-time">{formatTime(article.publishedAt || article.timestamp)}</span>
                 </div>
+                <h3 className="live-news-article-headline">{disp.headline || 'Breaking News'}</h3>
+                <p className="live-news-article-summary">{disp.summary || 'Processing...'}</p>
 
-                {/* Headline */}
-                <h3 className="live-news-article-headline">
-                  {article.headline || 'Breaking News'}
-                </h3>
+                {isEx && sum?.length > 0 && (
+                  <div className="live-news-article-bullets">
+                    <span className="bullet-label">📌 Quick Summary</span>
+                    <ul className="bullet-list">{sum.map((p, i) => <li key={i}>{p}</li>)}</ul>
+                  </div>
+                )}
+                {isEx && loading[`s-${id}`] && <div className="live-news-article-loading"><span className="loading-dot"></span> Generating summary...</div>}
 
-                {/* Summary */}
-                <p className="live-news-article-summary">
-                  {article.summary || 'Processing live broadcast...'}
-                </p>
-
-                {/* Expanded Article Content */}
-                {isExpanded && article.article && (
+                {isEx && disp.article && (
                   <div className="live-news-article-body">
                     <div className="live-news-article-divider"></div>
-                    <div className="live-news-article-full-text">
-                      {article.article}
-                    </div>
-                    {article.transcriptSnippet && (
-                      <div className="live-news-article-transcript">
-                        <span className="transcript-label">📝 Transcript excerpt:</span>
-                        <p>{article.transcriptSnippet}</p>
-                      </div>
-                    )}
+                    <div className="live-news-article-full-text">{disp.article}</div>
                   </div>
                 )}
 
-                {/* Action Row */}
                 <div className="live-news-article-actions">
-                  {article.article && (
-                    <button
-                      className="live-news-article-toggle"
-                      onClick={() => toggleExpand(article._id || article.headline)}
-                    >
-                      {isExpanded ? '▲ Show Less' : '▼ Read Full Article'}
+                  {disp.article && (
+                    <button className="live-news-article-toggle" onClick={() => { toggle(id); if (!isEx) { fetchSummary(id); fetchSentiment(id); } }}>
+                      {isEx ? '▲ Show Less' : '▼ Read Full Article'}
                     </button>
                   )}
-                  {article.sourceUrl && (
-                    <a
-                      href={article.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="live-news-article-link"
-                    >
-                      🔗 Watch Source
-                    </a>
+                  {sent && <span className={`sentiment-badge ${sent.sentiment}`}>{SENT_EMOJI[sent.sentiment]} {sent.sentiment}</span>}
+                  {disp.summary && (
+                    <button className={`tts-button ${speaking[id] ? 'speaking' : ''}`} onClick={() => speak(id, disp.summary + (disp.article ? '. ' + disp.article.slice(0,400) : ''), lang)}>
+                      {speaking[id] ? '⏹' : '🔊'}
+                    </button>
                   )}
+                  <div className="language-switcher">
+                    {['en','ta','hi'].map(l => {
+                      const existing = trans?.[l]?.headline;
+                      const isLoading = loading[`t-${id}-${l}`];
+                      return (
+                        <button key={l} className={`lang-btn ${lang === l ? 'active' : ''} ${existing || l === 'en' ? '' : 'unavailable'}`}
+                          onClick={() => l === 'en' ? setCurrentLang(p => ({...p, [id]: 'en'})) : existing ? setCurrentLang(p => ({...p, [id]: l})) : !isLoading && fetchTranslation(id, l)}
+                          disabled={isLoading}>{isLoading ? '...' : LANG_MAP[l]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {article.sourceUrl && <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="live-news-article-link">🔗 Watch Source</a>}
                 </div>
               </div>
             </div>
